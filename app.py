@@ -1,10 +1,22 @@
+from huggingface_hub import hf_hub_download
+import os
+
+MODEL_PATH = "artifacts/model.pkl"
+
+if not os.path.exists(MODEL_PATH):
+    os.makedirs("artifacts", exist_ok=True)
+    hf_hub_download(
+        repo_id="PSeshpavan/churn-prediction-model",
+        filename="model.pkl",
+        local_dir="artifacts"
+    )
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
 import shap
 import matplotlib.pyplot as plt
-import os
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -196,33 +208,23 @@ with st.spinner("Analyzing customer profile & running model..."):
         categorical_features = preprocessor.named_transformers_['cat'].named_steps['encoder'].get_feature_names_out(preprocessor.transformers_[1][2])
         feature_names = list(numeric_features) + list(categorical_features)
         
-        # Load pre-trained SHAP explainer if available; fallback to computing on-the-fly
-        explainer = None
-        explainer_path = os.path.join("artifacts", "explainer.pkl")
-        if os.path.exists(explainer_path):
+        # Compute SHAP values on the fly at runtime (explainer is not loaded from disk)
+        try:
+            bg_data = pd.read_csv("data.csv")
+            X_bg = bg_data.drop(columns=["Exited", "RowNumber", "CustomerId", "Surname"], errors="ignore")
+            # Sample 100 rows for background reference
+            X_bg_sample = X_bg.sample(100, random_state=42)
+            X_bg_transformed = preprocessor.transform(X_bg_sample)
+            
+            explainer = shap.TreeExplainer(model, data=X_bg_transformed, feature_perturbation='interventional')
+            shap_values = explainer.shap_values(X_transformed)
+        except Exception as explainer_err:
+            # Fallback if background data loading/explainer initialization fails
+            explainer = shap.TreeExplainer(model)
             try:
-                explainer = joblib.load(explainer_path)
-                shap_values = explainer.shap_values(X_transformed)
+                shap_values = explainer.shap_values(X_transformed, check_additivity=False)
             except Exception:
-                explainer = None
-                
-        if explainer is None:
-            try:
-                bg_data = pd.read_csv("data.csv")
-                X_bg = bg_data.drop(columns=["Exited", "RowNumber", "CustomerId", "Surname"], errors="ignore")
-                # Sample 100 rows for background reference
-                X_bg_sample = X_bg.sample(100, random_state=42)
-                X_bg_transformed = preprocessor.transform(X_bg_sample)
-                
-                explainer = shap.TreeExplainer(model, data=X_bg_transformed, feature_perturbation='interventional')
                 shap_values = explainer.shap_values(X_transformed)
-            except Exception as explainer_err:
-                # Fallback if background data loading/explainer initialization fails
-                explainer = shap.TreeExplainer(model)
-                try:
-                    shap_values = explainer.shap_values(X_transformed, check_additivity=False)
-                except Exception:
-                    shap_values = explainer.shap_values(X_transformed)
         
         # Robust extraction of 1D SHAP values for class 1
         if isinstance(shap_values, list):
