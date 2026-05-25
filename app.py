@@ -1,17 +1,6 @@
-from huggingface_hub import hf_hub_download
 import os
-
-MODEL_PATH = "artifacts/model.pkl"
-
-if not os.path.exists(MODEL_PATH):
-    os.makedirs("artifacts", exist_ok=True)
-    hf_hub_download(
-        repo_id="PSeshpavan/churn-prediction-model",
-        filename="model.pkl",
-        local_dir="artifacts"
-    )
-
 import streamlit as st
+from huggingface_hub import hf_hub_download
 import pandas as pd
 import numpy as np
 import joblib
@@ -25,6 +14,31 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed", # Collapse the sidebar by default
 )
+
+MODEL_PATH = "artifacts/model.pkl"
+download_error = None
+
+# Allow dynamic configuration via env vars or streamlit secrets
+REPO_ID = os.environ.get("HF_REPO_ID", "clans6213/churn-prediction-model")
+token = os.environ.get("HF_TOKEN")
+
+if "HF_REPO_ID" in st.secrets:
+    REPO_ID = st.secrets["HF_REPO_ID"]
+if "HF_TOKEN" in st.secrets:
+    token = st.secrets["HF_TOKEN"]
+
+# Check if model exists, if not attempt download
+if not os.path.exists(MODEL_PATH):
+    os.makedirs("artifacts", exist_ok=True)
+    try:
+        hf_hub_download(
+            repo_id=REPO_ID,
+            filename="model.pkl",
+            local_dir="artifacts",
+            token=token
+        )
+    except Exception as e:
+        download_error = str(e)
 
 # --- Premium Custom Styling (Dark/Modern Tech Theme) ---
 st.markdown("""
@@ -142,7 +156,33 @@ def load_model():
 pipeline = load_model()
 
 if not pipeline:
-    st.error("Model pipeline not found! Please ensure 'artifacts/model.pkl' exists.")
+    st.markdown(f"""
+    <div style="background-color: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #ef4444; margin-top: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); font-family: 'Outfit', sans-serif;">
+        <h3 style="color: #ef4444; margin-top: 0; font-size: 1.5rem; font-weight: 700;">🚨 Model Download/Load Failed</h3>
+        <p style="color: #cbd5e1; font-size: 0.95rem;">The application could not locate or download the trained model file (<code>model.pkl</code>) from the Hugging Face Hub.</p>
+        
+        <div style="background-color: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px;">
+            <span style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 600;">Original Error</span>
+            <code style="display: block; color: #f43f5e; font-size: 0.85rem; word-break: break-all; margin-top: 5px;">{download_error or "File artifacts/model.pkl is missing and no download error was recorded."}</code>
+        </div>
+        
+        <h4 style="color: #f8fafc; font-size: 1.1rem; margin-bottom: 10px; font-weight: 600;">🛠️ Troubleshooting Steps</h4>
+        <ol style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; padding-left: 20px;">
+            <li><b>Verify Hugging Face Repository:</b> Make sure you have uploaded the model to a public repository named <code>{REPO_ID}</code> (or check if there is a typo).</li>
+            <li><b>Check Repository Visibility:</b> If the repository is <b>private</b>, you must configure a Hugging Face token:
+                <ul style="padding-left: 20px; margin-top: 5px;">
+                    <li>Generate a <b>Read</b> token at <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: #3b82f6; text-decoration: underline;">huggingface.co/settings/tokens</a>.</li>
+                    <li>In Streamlit Cloud settings, go to <b>Secrets</b> and add:
+                        <pre style="background-color: #0f172a; padding: 8px; border-radius: 5px; margin-top: 5px; color: #38bdf8; font-family: monospace;">HF_TOKEN = "your_token_here"</pre>
+                    </li>
+                </ul>
+            </li>
+            <li><b>Set Custom Repo ID (optional):</b> If you moved the model to a different repository, configure it in Streamlit Secrets:
+                <pre style="background-color: #0f172a; padding: 8px; border-radius: 5px; margin-top: 5px; color: #38bdf8; font-family: monospace;">HF_REPO_ID = "your_username/your_repo_name"</pre>
+            </li>
+        </ol>
+    </div>
+    """, unsafe_allow_html=True)
     st.stop()
 
 # --- Main Page Form Configuration ---
