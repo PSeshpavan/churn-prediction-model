@@ -69,17 +69,17 @@ and a localized SHAP explainability chart showing which features
 drove that specific prediction.
 
 ### Low Risk — 6.2% Churn Probability
-![Low Risk Prediction](proof/Screenshot%202026-05-26%2002164 2.png)
+![Low Risk Prediction](proof/screenshot1.png)
 *Active customer in France with 2 products. NumOfProducts and 
 Geography_France are the dominant protective factors.*
 
 ### Medium Risk — 25.5% Churn Probability
-![Medium Risk Prediction](proof/Screenshot%202026-05-26%2002182 7.png)
+![Medium Risk Prediction](proof/screenshot2.png)
 *Older male customer in Spain with 1 product. Age is the strongest 
 churn driver; IsActiveMember partially offsets the risk.*
 
 ### High Risk — 70%+ Churn Probability
-![High Risk Prediction](proof/Screenshot%202026-05-26%2002212 5.png)
+![High Risk Prediction](proof/screenshot3.png)
 *Inactive customer in Germany with low credit score and 1 product. 
 Age and NumOfProducts both push strongly toward churn — classic 
 high-risk profile.*
