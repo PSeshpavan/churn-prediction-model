@@ -20,13 +20,9 @@ Customer churn is a critical issue for banks and financial institutions, where r
 2. **Place your data**  
    Ensure `data.csv` is present in the root directory. The expected columns include customer demographics, account info, and a binary churn label (`Exited`).
 
-3. **Run the pipeline**  
-   Open and execute all cells in [`churn_prediction.ipynb`](churn_prediction.ipynb) for a full, reproducible workflow:
-   - Data loading & preprocessing
-   - Model training & selection (Logistic Regression, Random Forest, XGBoost if available)
-   - Evaluation (metrics, ROC, confusion matrix)
-   - Explainability (feature importance, SHAP)
-   - Export of all artifacts
+3. **Retrain the model and generate artifacts**  
+   Run `python modify_and_train.py` to retrain the model and generate 
+`artifacts/model.pkl` before running the app.
 
 ---
 
